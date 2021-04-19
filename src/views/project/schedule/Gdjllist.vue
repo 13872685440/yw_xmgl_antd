@@ -1,0 +1,87 @@
+<template>
+  <a-spin :spinning="spinning">
+    <a-button v-if="!isview && state!='00100002'" type="primary" icon="plus" v-action:SYS_ADMINISTRATOR   @click="$refs.createContent.add('')">新建</a-button>
+    <a-table :columns="columns" :dataSource="data" :pagination="false" :loading="spinning" ref="table"></a-table>
+    <create-content ref="createContent" :keyValue="id" type="1" @ok="handleOk" />
+  </a-spin>
+</template>
+<script>
+import createContent from "./modules/CreateContent";
+import { queryService } from "@/api/manage";
+import moment from "moment";
+
+export default {
+  name: "Form_Content",
+  props: ["id", "isview","state"],
+  components: {
+    createContent,
+  },
+  data() {
+    return {
+      spinning: true,
+      columns: [
+        {
+         title: '序号',
+          dataIndex: 'num',
+          scopedSlots: { customRender: "action1" },
+        },
+        {
+          title: '提交时间',
+          dataIndex: 'ct',
+          customRender: function(val) {
+            return val ? moment(val).format('YYYY-MM-DD') : ''
+          },
+        },
+        {
+          title: '内容',
+          dataIndex: 'content',
+        },
+        {
+          title: '状态',
+          dataIndex: 'state_name',
+        },
+      ],
+      data: [],
+      path: {},
+    };
+  },
+  async created() {},
+  mounted() {
+    const prefix = "/" + this.GLOBAL.MODEL_SYSTEM;
+    this.path.query_path = prefix + "/content/getList";
+    this.path.find_path = prefix + "/schedule/find";
+
+
+    this.renderTable();
+    this.spinning = false;
+  },
+  methods: {
+    handleOk() {
+      this.renderTable();
+    },
+    async renderTable() {
+       await queryService(this.path.find_path, { id: this.id }).then(res => {
+        this.$emit("changeForm", {
+          name: "base",
+          data: res.result,
+        });
+      });
+      await queryService(this.path.query_path, {
+        keyValue: this.id,
+        type:"1",
+      }).then((res) => {
+         res.result.forEach((value,index) => {
+          value.num = index+1;
+          });
+        this.data = res.result;
+      });
+    },
+  },
+};
+</script>
+
+<style lang="less" scoped>
+.ant-table-wrapper {
+  padding-top: 10px;
+}
+</style>
